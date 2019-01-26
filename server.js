@@ -1,29 +1,26 @@
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
-const mongodb = require('mongodb')
 const mongoose = require('mongoose')
+const path = require('path')
 
 const cors = require('cors')
 
-const mongoose = require('mongoose')
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track' )
+mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track')
 
 app.use(cors())
 
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
-
 
 app.use(express.static('public'))
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/views/index.html')
-});
-
+  res.sendFile(path.join(__dirname, '/views/index.html'))
+})
 
 // Not found middleware
 app.use((req, res, next) => {
-  return next({status: 404, message: 'not found'})
+  return next({ status: 404, message: 'not found' })
 })
 
 // Error Handling middleware

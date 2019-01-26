@@ -1,12 +1,12 @@
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
-const mongoose = require('mongoose')
 const path = require('path')
-
 const cors = require('cors')
 
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track')
+const { mongoose, User, Exercise } = require('./mongoose/mongoose')
+
+// mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track')
 
 app.use(cors())
 
@@ -18,10 +18,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '/views/index.html'))
 })
 
-// Not found middleware
-app.use((req, res, next) => {
-  return next({ status: 404, message: 'not found' })
-})
+// // Not found middleware
+// app.use((req, res, next) => {
+//   return next({ status: 404, message: 'not found' })
+// })
 
 // Error Handling middleware
 app.use((err, req, res, next) => {
@@ -42,6 +42,28 @@ app.use((err, req, res, next) => {
     .send(errMessage)
 })
 
+app.post('/api/exercise/new-user', (req, res) => {
+  let username = req.body.username
+  console.log(username)
+
+  if (!username) {
+    res.status(400).send()
+  } else {
+    if (req.body.username === '' || typeof username !== 'string') {
+      res.status(400).send()
+    }
+
+    let user = new User({ username })
+    user.save()
+      .then(user => {
+        res.json(user)
+      })
+      .catch(e => res.status(400).send(e))
+  }
+})
+
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
 })
+
+module.exports = { app }

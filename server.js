@@ -18,11 +18,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '/views/index.html'))
 })
 
-// // Not found middleware
-// app.use((req, res, next) => {
-//   return next({ status: 404, message: 'not found' })
-// })
-
 // Error Handling middleware
 app.use((err, req, res, next) => {
   let errCode, errMessage

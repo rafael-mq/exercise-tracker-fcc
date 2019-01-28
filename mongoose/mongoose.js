@@ -1,4 +1,9 @@
 require('dotenv').config()
+
+if (process.env.NODE_ENV === 'test') {
+  process.env.MLAB_URI = "mongodb://localhost:27017/ExerciseTrackerTest"
+  process.env.PORT = 3000
+}
 const mongoose = require('mongoose')
 
 mongoose.Promise = global.Promise

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // External dependencies imports
 const expect = require('expect')
 const request = require('supertest')
@@ -44,6 +45,48 @@ describe('Users Tests', function () {
             })
             .catch(e => done(e))
         })
+    })
+
+    it('should not create user with empty username', done => {
+      request(app)
+        .post('/api/exercise/new-user')
+        .send({ username })
+        .expect(400)
+        .end((err) => {
+          if (err) { return done(err) }
+          User.countDocuments({}, (err, count) => {
+            if (err) { return done(err) }
+            expect(count).toBe(2)
+            done()
+          })
+        })
+    })
+
+    it('should not create duplicated user', done => {
+      request(app)
+        .post('/api/exercise/new-user')
+        .send({ username: '' })
+        .expect(400)
+        .end((err) => {
+          if (err) { return done(err) }
+          User.countDocuments({}, (err, count) => {
+            if (err) { return done(err) }
+            expect(count).toBe(2)
+            done()
+          })
+        })
+    })
+  })
+
+  describe('GET /api/exercise/users', () => {
+    it('should get array of all users', done => {
+      request(app)
+        .get('/api/exercise/users')
+        .expect(200)
+        .expect(res => {
+          expect(res.body.length).toBe(2)
+        })
+        .end(done)
     })
   })
 })

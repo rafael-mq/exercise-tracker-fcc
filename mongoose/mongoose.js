@@ -44,7 +44,7 @@ var Exercise = new mongoose.model('Exercise', {
   },
   date: {
     type: Date,
-    default: Date.now
+    default: new Date().setUTCHours(0,0,0,0)
   }
 })
 

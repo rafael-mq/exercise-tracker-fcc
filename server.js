@@ -5,7 +5,8 @@ const path = require('path')
 const cors = require('cors')
 const _ = require('lodash')
 
-const { mongoose, User, Exercise } = require('./mongoose/mongoose')
+const { User, Exercise } = require('./mongoose/mongoose')
+const { validation } = require('./validation/validation')
 
 app.use(cors())
 
@@ -66,10 +67,17 @@ app.get('/api/exercise/users', (req, res) => {
     .catch(e => res.status(400).send(e))
 })
 
+// Route to add an exercise with userId, description, duration (in minutes)
+// and [optionally] date
 app.post('/api/exercise/add', (req, res) => {
   let body = _.pick(req.body, ['userId', 'description', 'duration'])
+
   if (!(typeof req.body.date === 'undefined')) {
     body.date = Date.parse(req.body.date)
+  }
+
+  if (typeof req.body.duration === 'undefined' || typeof req.body.description === 'undefined') {
+    return res.status(400).json({ error: 'Missing required data' })
   }
 
   let exercise = new Exercise(body)
@@ -84,10 +92,28 @@ app.post('/api/exercise/add', (req, res) => {
       }
     })
     .then(exercise => {
-      console.log(JSON.stringify(exercise, undefined, 2))
       res.status(200).json(exercise)
     })
-    .catch(e => res.status(400).send(e))
+    .catch(e => {
+      res.status(400).send(e)
+    })
+})
+
+// Route to get entire log of exercises of an user or part of it with time
+// boundaries and/or amount limit
+app.get('/api/exercise/log', (req, res) => {
+  let { userId, fromDate, toDate, lmt, error } = validation(req.query)
+
+  if (error) { return res.status(400).json(error) }
+
+  Exercise.find({ userId })
+    .$where(function () {
+      let from = this.date.getTime() >= fromDate.getTime()
+      let to = this.date.getTime() <= toDate.getTime()
+      return from && to
+    })
+    .limit(lmt)
+    .then()
 })
 
 const listener = app.listen(process.env.PORT || 3000, () => {

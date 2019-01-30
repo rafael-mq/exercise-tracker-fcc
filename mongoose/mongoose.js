@@ -1,7 +1,7 @@
 require('dotenv').config()
 
 if (process.env.NODE_ENV === 'test') {
-  process.env.MLAB_URI = "mongodb://localhost:27017/ExerciseTrackerTest"
+  process.env.MLAB_URI = 'mongodb://localhost:27017/ExerciseTrackerTest'
   process.env.PORT = 3000
 }
 const mongoose = require('mongoose')
@@ -18,25 +18,16 @@ var UserSchema = new mongoose.Schema({
   }
 })
 
-// Instance method to avoid allowing sensitive info to be sent to client
-UserSchema.methods.toJSON = function () {
-  let user = this.toObject()
-  let { _id, username } = user
-
-  return { _id, username }
-}
-
 var User = mongoose.model('User', UserSchema)
 
-var Exercise = new mongoose.model('Exercise', {
+var Exercise = mongoose.model('Exercise', {
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true
   },
   description: {
     type: String,
-    required: true,
-    default: 'Cardio'
+    required: true
   },
   duration: {
     type: Number,
@@ -44,7 +35,7 @@ var Exercise = new mongoose.model('Exercise', {
   },
   date: {
     type: Date,
-    default: new Date().setUTCHours(0,0,0,0)
+    default: new Date().setUTCHours(0, 0, 0, 0)
   }
 })
 

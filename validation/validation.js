@@ -12,9 +12,8 @@ const validation = function (query) {
     // If no date from limit is informed it is assumed to UTC date
     fromDate = new Date(0).setUTCHours(0, 0, 0, 0)
   } else {
-    try {
-      fromDate = Date.parse(query.from)
-    } catch (error) {
+    fromDate = Date.parse(query.from)
+    if (isNaN(fromDate)) {
       return { error: 'Unable to parse from date' }
     }
   }
@@ -23,9 +22,8 @@ const validation = function (query) {
   if (_.isUndefined(query.to)) {
     toDate = new Date().setUTCHours(0, 0, 0, 0)
   } else {
-    try {
-      toDate = Date.parse(query.to)
-    } catch (error) {
+    toDate = Date.parse(query.to)
+    if (isNaN(toDate)) {
       return { error: 'Unable to parse to date' }
     }
   }
@@ -34,7 +32,14 @@ const validation = function (query) {
     return { error: 'From date is greater than to date' }
   }
 
-  let limit = 0
+  let lmt = 0
+  if (_.isUndefined(query.limit)) {
+    lmt = 1000
+  } else if (isNaN(query.limit)) {
+    return { error: 'Limit is not a number' }
+  } else {
+    lmt = Number(query.limit)
+  }
 
   return { userId, fromDate, toDate, lmt }
 }

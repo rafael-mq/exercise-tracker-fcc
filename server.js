@@ -103,17 +103,45 @@ app.post('/api/exercise/add', (req, res) => {
 // boundaries and/or amount limit
 app.get('/api/exercise/log', (req, res) => {
   let { userId, fromDate, toDate, lmt, error } = validation(req.query)
+  let user = {}
 
-  if (error) { return res.status(400).json(error) }
+  if (!_.isUndefined(error)) { return res.status(400).json({ error }) }
+  User.findById(userId)
+    .then(doc => {
+      if (!doc) { return res.status(400).json({ error: 'Unexisting user' }) }
+      // Mounting user object to be sent
+      user = _.pick(doc, '_id', 'username')
 
-  Exercise.find({ userId })
-    .$where(function () {
-      let from = this.date.getTime() >= fromDate.getTime()
-      let to = this.date.getTime() <= toDate.getTime()
-      return from && to
+      // return exercise query if user is found
+      return Exercise.find({ userId })
     })
-    .limit(lmt)
-    .then()
+    .then(docs => {
+      if (docs.length === 0) {
+        user.count = 0
+        user.log = []
+      } else {
+        // Filter exercise log by from and to dates
+        user.log = docs.filter(exercise => {
+          let from = exercise.date.getTime() >= fromDate
+          let to = exercise.date.getTime() <= toDate
+          return from && to
+        })
+
+        // Sort exercises by date
+        user.log.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+        // Aply limit to log
+        if (lmt < user.log.length) {
+          user.log.slice(user.log.length - lmt)
+        }
+        user.count = user.log.length
+      }
+      return res.json(user)
+    })
+    .catch(e => {
+      console.log(e)
+      return res.status(400).json(e)
+    })
 })
 
 const listener = app.listen(process.env.PORT || 3000, () => {

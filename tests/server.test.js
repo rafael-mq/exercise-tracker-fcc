@@ -8,24 +8,12 @@ const { ObjectID } = require('mongodb')
 const { app } = require('./../server')
 const { User } = require('./../mongoose/mongoose')
 const { Exercise } = require('./../mongoose/mongoose')
-
-const dummyId = new ObjectID()
+const { populateUsers, populateExercises, dummyId } = require('./seed/seed')
 
 describe('Users Tests', function () {
   this.timeout(10000)
-  const dummyUser = new User({
-    username: 'dummy',
-    _id: dummyId
-  })
 
-  before(done => {
-    User.deleteMany({})
-      .then(() => {
-        return dummyUser.save()
-      })
-      .then(() => done())
-      .catch(e => done(e))
-  })
+  before(populateUsers)
 
   describe('POST /api/exercise/new-user', () => {
     let username = 'caju'
@@ -54,7 +42,7 @@ describe('Users Tests', function () {
     it('should not create user with empty username', done => {
       request(app)
         .post('/api/exercise/new-user')
-        .send({ username })
+        .send({ username: '' })
         .expect(400)
         .end((err) => {
           if (err) { return done(err) }
@@ -69,7 +57,7 @@ describe('Users Tests', function () {
     it('should not create duplicated user', done => {
       request(app)
         .post('/api/exercise/new-user')
-        .send({ username: '' })
+        .send({ username })
         .expect(400)
         .end((err) => {
           if (err) { return done(err) }
@@ -96,11 +84,7 @@ describe('Users Tests', function () {
 })
 
 describe('Exercises Tests', function () {
-  after(done => {
-    Exercise.deleteMany({})
-      .then(() => done())
-      .catch(e => done(e))
-  })
+  before(populateExercises)
 
   describe('POST /api/exercise/add', () => {
     let timestamp = new Date().setUTCHours(0, 0, 0, 0)
@@ -123,7 +107,7 @@ describe('Exercises Tests', function () {
         })
         .end(err => {
           if (err) { return done(err) }
-          Exercise.countDocuments({})
+          Exercise.countDocuments({ description: 'academia' })
             .then(c => {
               expect(c).toBe(1)
               done()
@@ -148,6 +132,73 @@ describe('Exercises Tests', function () {
         .post('/api/exercise/add')
         .send({ userId: dummyId + 1, description: 'parkour', duration: 1 })
         .expect(400)
+        .end(done)
+    })
+  })
+
+  describe('GET /api/exercise/log', () => {
+    it('should get all exercises when only id is informed', done => {
+      request(app)
+        .get('/api/exercise/log')
+        .query({
+          userId: dummyId.toHexString()
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body.count).toBe(11)
+        })
+        .expect(res => {
+          expect(res.body.log.length).toBe(res.body.count)
+        })
+        .end(done)
+    })
+
+    it('should fail to get exercises from unexisting user', done => {
+      let wrongId = '5c549138d80cdd33907ec330'
+      request(app)
+        .get('/api/exercise/log')
+        .query({
+          userId: wrongId
+        })
+        .expect(400)
+        .expect(res => {
+          expect(res.body.error).toBe('Unexisting user')
+        })
+        .end(done)
+    })
+
+    it('should get exercises between dates informed', done => {
+      request(app)
+        .get('/api/exercise/log')
+        .query({
+          userId: dummyId.toHexString(),
+          from: '2018-12-12',
+          to: '2018-12-15'
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body.count).toBe(4)
+        })
+        .expect(res => {
+          for (let i = 0; i < res.body.count; i++) {
+            expect(Date.parse(res.body.log[i].date)).toBeGreaterThanOrEqual(Date.parse('2018-12-12'))
+            expect(Date.parse(res.body.log[i].date)).toBeLessThanOrEqual(Date.parse('2018-12-15'))
+          }
+        })
+        .end(done)
+    })
+
+    it('should get at most the limit amount of exercises', done => {
+      request(app)
+        .get('/api/exercise/log')
+        .query({
+          userId: dummyId.toHexString(),
+          limit: 15
+        })
+        .expect(200)
+        .expect(res => {
+          expect(res.body.count).toBeLessThanOrEqual(15)
+        })
         .end(done)
     })
   })

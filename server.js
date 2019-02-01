@@ -8,8 +8,8 @@ const _ = require('lodash')
 const { User, Exercise } = require('./mongoose/mongoose')
 const { validation } = require('./validation/validation')
 
+// Middlewares
 app.use(cors())
-
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
@@ -92,7 +92,7 @@ app.post('/api/exercise/add', (req, res) => {
       }
     })
     .then(exercise => {
-      res.status(200).json(exercise)
+      res.json(_.pick(exercise, 'userId', 'duration', 'description', 'date'))
     })
     .catch(e => {
       res.status(400).send(e)
@@ -105,43 +105,47 @@ app.get('/api/exercise/log', (req, res) => {
   let { userId, fromDate, toDate, lmt, error } = validation(req.query)
   let user = {}
 
-  if (!_.isUndefined(error)) { return res.status(400).json({ error }) }
-  User.findById(userId)
-    .then(doc => {
-      if (!doc) { return res.status(400).json({ error: 'Unexisting user' }) }
-      // Mounting user object to be sent
-      user = _.pick(doc, '_id', 'username')
-
-      // return exercise query if user is found
-      return Exercise.find({ userId })
-    })
-    .then(docs => {
-      if (docs.length === 0) {
-        user.count = 0
-        user.log = []
-      } else {
-        // Filter exercise log by from and to dates
-        user.log = docs.filter(exercise => {
-          let from = exercise.date.getTime() >= fromDate
-          let to = exercise.date.getTime() <= toDate
-          return from && to
-        })
-
-        // Sort exercises by date
-        user.log.sort((a, b) => a.date.getTime() - b.date.getTime())
-
-        // Aply limit to log
-        if (lmt < user.log.length) {
-          user.log.slice(user.log.length - lmt)
+  if (!_.isUndefined(error)) {
+    return res.status(400).json({ error })
+  } else {
+    User.findById(userId)
+      .then(doc => {
+        if (!doc) {
+          res.status(400).json({ error: 'Unexisting user' })
+          return Promise.reject(new Error('Unexisting user'))
         }
-        user.count = user.log.length
-      }
-      return res.json(user)
-    })
-    .catch(e => {
-      console.log(e)
-      return res.status(400).json(e)
-    })
+        // Mounting user object to be sent
+        user = _.pick(doc, '_id', 'username')
+
+        // return exercise query if user is found
+        return Exercise.find({ userId })
+      })
+      .then(docs => {
+        if (docs.length === 0) {
+          user.count = 0
+          user.log = []
+        } else {
+        // Filter exercise log by from and to dates
+          user.log = docs.filter(exercise => {
+            let from = exercise.date.getTime() >= fromDate
+            let to = exercise.date.getTime() <= toDate
+            return from && to
+          })
+
+          // Sort exercises by date
+          user.log.sort((a, b) => a.date.getTime() - b.date.getTime())
+          // Aply limit to log
+          if (lmt < user.log.length) {
+            user.log = user.log.slice(user.log.length - lmt)
+          }
+          user.count = user.log.length
+        }
+        return res.json(user)
+      }, () => res.status(400).send())
+      .catch(e => {
+        console.log(e)
+      })
+  }
 })
 
 const listener = app.listen(process.env.PORT || 3000, () => {
